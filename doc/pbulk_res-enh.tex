@@ -1,0 +1,115 @@
+\documentclass{article}
+\usepackage{graphicx} % Allow insertion of graphics.
+\usepackage{authblk} % Better layout of affiliations.
+\usepackage[margin=1in]{geometry} % Set margins.
+\usepackage{xcolor} % Allow colored text.
+\usepackage[sort&compress]{natbib} % Better bibliography formatting.
+\usepackage{amsmath} % Some fancy math stuff.
+\usepackage{url} % Allow URLs.
+\usepackage{multirow} % Allow multirows for tables
+\usepackage{booktabs} % For \toprule, \midrule, \bottomrule in tables.
+\usepackage{amssymb} % for checkmarks
+\usepackage{rotating} % Allow rotation.
+
+\newcommand{\fixme}[1]{{\color{red}{\bf #1}\color{black}}}
+
+\newcommand{\rdg}[1]{\begin{rotate}{45} #1 \end{rotate}}
+
+\title{Enhancing scHi-C pseudobulk matrices for fine-resolution analysis of rare cell types}
+
+\author[1]{Amir Momoh}
+\author[1]{Ghulam Murtaza}
+\author[1,2]{William Stafford Noble}
+
+\affil[1]{Department of Genome Sciences, University of Washington}
+\affil[2]{Paul G.\ Allen School of Computer Science and Engineering, University of Washington}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+The three-dimensional organization of the genome is tightly coupled to gene regulation.
+Chromatin loops bring distal regulatory elements into contact with their target genes, and topologically associating domains (TADs) constrain which regions interact, so disruptions to this organization can dysregulate genes and contribute to developmental disorders and disease \cite{}.
+The standard assay for measuring genome organization is genome-wide chromosome conformation capture (Hi-C) \cite{}, which reports, for each pair of genomic loci, how often the two loci are found in contact.
+These counts are assembled into a matrix in which loops appear as locally enriched entries and TADs as square blocks along the diagonal.
+
+Conventional Hi-C is performed on bulk samples of millions of cells, so the resulting contact matrix is an average across the entire population and obscures differences among the cell types that make up a tissue.
+Single-cell Hi-C (scHi-C) instead measures one cell at a time \cite{}, which resolves cell-type-specific organization, however each contact matrix is extremely sparse.
+Different scHi-C technologies trade off the number of cells profiled against the number of contacts recovered per cell. 
+For instance, some technologies \cite{} may profile many cells shallowly, which is useful for surveying the diversity of cell types in a tissue, while others profile fewer cells deeply, which is useful for resolving fine structure within each cell. 
+Regardless, the number of contacts recovered per cell range from $10^4$ to $10^6$, which is extremely sparse when we compare it to bulk sequencing which routinely generate contacts in order of $10^8$.
+
+This sparsity poses a fundamental challenge for studying chromatin organization in any individual cell, because loops and TADs are defined by contact frequency, and a single sparse matrix does not contain enough observations to estimate that frequency reliably.
+Cell-type-specific structure is therefore studied by pooling all cells assigned to a given type into a single 'pseudobulk' matrix, which aggregates contacts across many cells to yield dense contact matrices that support fine-scale analysis.
+Pooling, however, presupposes that each cell already has a type label.
+Because there is no well-established method for assigning cell types from chromatin structure alone, these labels are often derived from a second modality that is measured in the same cells.
+In particular, scHi-C has been co-assayed with both gene expression (scRNA-seq) \cite{} and DNA methylation \cite{}. 
+These co-assayed transcriptomic and epigenomic measurements resolve cell-type identity more cleanly than sparse chromatin structure, providing a reliable basis for assigning cells to types.
+
+The quality of a pseudobulk matrix depends directly on the number of cells pooled to construct it.
+An abundant cell type contributes many cells, and their combined contacts yield a matrix dense enough to resolve loops and TADs at fine resolution.
+A rare cell type however does not. 
+with only a handful of cells to aggregate, the pooled matrix stays sparse.
+Thus, pseudobulking works for cell types that are already well represented and fails for rare ones, leaving their matrices too sparse to support analysis at the finer resolutions at which we detect loops and small domains.
+This gap is consequential, because rare populations are often the ones that matter most.
+They rare cell population are known to drive many disease processes including tumor-initiating cells in cancer \cite{}, or senescent cells, which accumulate with age and have also been implicated in neurodegeneration \cite{}.
+Rare cell populations also include the transient, low-abundance progenitor and intermediate states that mark the paths along which cells differentiate \cite{}.
+Being able to identify them is what makes it possible to characterize the cellular heterogeneity of complex tissues such as the brain \cite{}.
+
+The goal of this project is to recover the fine-scale chromatin structure that is missing from sparse pseudobulk matrices, so that we can study rare cell types at the same resolution as abundant ones.
+
+Existing approaches, however, are not designed for this setting.
+Methods that enhance sparse Hi-C data were built for bulk experiments, and therefore expect inputs with far higher coverage than the pseudobulk matrices available for rare cell populations \cite{}.
+Methods built for single-cell Hi-C instead operate at single-cell resolution, and to cope with the sparsity of individual cells they collapse contact matrices to coarse resolution \cite{}.
+As a result, neither type of method can recover fine-scale chromatin features such as loops and small domains in sparse pseudobulk matrices.
+
+To address this, we repurpose Fractal, a Hi-C foundation model that was pretrained on a large collection of Hi-C experiments using the DINO self-supervised objective \cite{}.
+We previously found that Fractal's representations stay stable even as a contact matrix becomes sparser.
+Therefore, we fine-tune Fractal to enhance sparse pseudobulk matrices, using abundant cell types, where we can pool many cells to build a dense target and subsample them to create the matching sparse input.
+We then apply the fine-tuned model to recover fine-resolution contact maps for rare cell types.
+
+Our results demonstrate.... coming soon!
+
+\section{Methods}
+
+\section{Results}
+
+\section{Discussion}
+
+
+
+
+\paragraph{Author contributions}~
+
+\newcommand{\dt}{$\bullet$}
+
+% Credit term definitions: https://credit.niso.org/
+
+\begin{scriptsize}
+\begin{tabular}{lccc}
+  & AM & GM & WSN \\
+Conceptualization & \dt & \dt & \\
+Data curation \\
+Formal analysis \\
+Funding acquisition & \dt & & \dt \\
+Investigation \\
+Methodology \\
+Project administration \\
+Software \\
+Resources \\
+Supervision \\
+Validation \\
+Visualization \\
+Writing---original draft \\
+Writing---review \& editing \\
+\end{tabular}
+\end{scriptsize}
+
+
+\bibliographystyle{unsrt}
+\bibliography{local-refs} % See https://github.com/Noble-Lab/noble-lab-references
+
+\end{document}
