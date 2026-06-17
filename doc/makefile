@@ -1,4 +1,4 @@
-all: pseudobulk-resenh.pdf
+all: pbulk-res-enh.pdf
 
 %.pdf: %.tex
 	pdflatex $*.tex
