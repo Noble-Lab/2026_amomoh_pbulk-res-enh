@@ -49,19 +49,11 @@ def build_contact_matrix(pairs_file, bin_size = 1000000):
     # Step 4: Build a symmetric sparse matrix
     data = np.ones(len(bin_i))
     matrix = sp.coo_matrix((data, (bin_i, bin_j)), shape = (total_bins, total_bins)).tocsr()
-    
+
+    # Add the transpose to make the matrix symmetric, then halve the diagonal to correct for double-counting
     matrix = matrix + matrix.T
-
-    # Step 5: Filter the low-coverage bins
-    marginals = np.array(matrix.sum(axis = 1)).flatten()
-    median = np.median(marginals[marginals > 0])
-    threshold = 0.1 * median    # 10% threshold
-    low_coverage = marginals < threshold
-
-    matrix = matrix.tolil()
-    matrix[low_coverage, :] = 0
-    matrix[:, low_coverage] = 0
-    matrix = matrix.tocsr()
+    diagonal = sp.diags(matrix.diagonal() / 2)
+    matrix = matrix - diagonal
 
     return matrix, chrom_offsets, chrom_sizes
 
