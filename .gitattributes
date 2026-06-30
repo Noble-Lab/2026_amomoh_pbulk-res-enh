@@ -1,0 +1,11 @@
+# Normalize line endings across platforms
+* text=auto
+
+# Treat notebooks as text for diffing, not binary
+*.ipynb text eol=lf
+
+# Python files use LF line endings
+*.py text eol=lf
+
+# Shell scripts always use LF (important since Windows defaults to CRLF)
+*.sh text eol=lf
