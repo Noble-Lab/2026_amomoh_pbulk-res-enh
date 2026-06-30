@@ -1,0 +1,17 @@
+# Raw and extracted data — too large for version control
+data/**/*.txt
+data/**/*.txt.gz
+data/**/*.gz
+data/**/*.tar
+data/**/*.hic
+
+# Output matrices
+results/**/*.npz
+results/**/*.png
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.pyc
