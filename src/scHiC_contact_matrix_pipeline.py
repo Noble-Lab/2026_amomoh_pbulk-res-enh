@@ -1,23 +1,56 @@
+"""
+scHiC_contact_matrix_pipeline.py
+
+Core library functions for building and visualizing single-cell Hi-C
+contact matrices from .allValidPairs.txt files. 
+"""
 import pandas as pd
 import numpy as np
 import scipy.sparse as sp
 import matplotlib.pyplot as plt
 
+
+def _parse_header(pairs_file):
+    # Parse the leading '#' header block in a single pass, stopping at the
+    # first non-header line since headers are always contiguous at the top
+    chrom_sizes = {}
+    columns = None
+    with open(pairs_file) as file:
+        for line in file:
+            if not line.startswith("#"):
+                break
+
+            line = line.strip()
+
+            # Handles both header variants seen in real GEO files:
+            # '#chromsize: chrN size' and '#chromosome: chrN size'
+            if line.startswith("#chromsize:") or line.startswith("#chromosome:"):
+                _, chrom, size = line.split()
+                chrom_sizes[chrom] = int(size)
+
+            # Some cell types (e.g. GM12878) include extra columns
+            # (phase0, phase1) beyond the standard readID/chr1/pos1/chr2/pos2/strand1/strand2 set
+            elif line.startswith("#columns:"):
+                columns = line.split(":", 1)[1].split()
+
+    # Fallback for files with no '#columns:' header
+    if columns is None:
+        columns = ["readID", "chr1", "pos1", "chr2", "pos2", "strand1", "strand2"]
+
+    return chrom_sizes, columns
+
+
 def build_contact_matrix(pairs_file, bin_size = 1000000):
-    # Step 1: Load contact pairs and skip all header lines
+    # Step 1: Parse header once: chromosome sizes and true column layout
+    chrom_sizes, columns = _parse_header(pairs_file)
+
+    # Step 2: Load contact pairs, skipping '#' header lines
+    # (handles extra trailing columns like phase0/phase1 present in some cell types)
     df = pd.read_csv(pairs_file, sep = '\t', comment = '#', header = None)
-    df.columns = ["readID", "chr1", "pos1", "chr2", "pos2", "strand1", "strand2"]
+    df.columns = columns
 
     # Keep only intra-chromosomal contacts (both ends on the same chromosome)
     df = df[df["chr1"] == df["chr2"]]
-
-    # Step 2: Parse chromosome sizes and build sorted offset map
-    chrom_sizes = {}
-    with open(pairs_file) as file:
-        for line in file:
-            if line.startswith("#chromsize:"):
-                _, chrom, size = line.strip().split()
-                chrom_sizes[chrom] = int(size)
 
     num, non_num = [], []
     
@@ -56,6 +89,7 @@ def build_contact_matrix(pairs_file, bin_size = 1000000):
     matrix = matrix - diagonal
 
     return matrix, chrom_offsets, chrom_sizes
+
 
 def plot_contact_matrix(built_matrix, chrom, chrom_offsets, chrom_sizes, bin_size = 1000000):
     # Extract the submatrix for this chromosome
