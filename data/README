@@ -1,0 +1,21 @@
+SOURCE
+------
+GSE240114 (NCBI GEO), from the LiMCA paper (Wu et al. 2024, Nat Methods,
+DOI: 10.1038/s41592-024-02239-0). Downloaded 2026-06-29. 23.5 GB raw,
+not tracked in Git (see below).
+
+DIRECTORY STRUCTURE
+--------------------
+data/2026-06-29/{BJ, K562, GM12878}/           *.allValidPairs.txt
+data/2026-06-29/eHAP/standard/                 *.allValidPairs.txt  <- used these
+data/2026-06-29/eHAP/e_variant/                *.e.allValidPairs.txt
+
+Cell counts: BJ 63, K562 63, eHAP 42, GM12878 220 (cell_032 missing).
+
+NOT TRACKED IN GIT
+--------------------
+Raw .allValidPairs.txt files excluded using .gitignore (data/**/*.txt, *.gz,
+*.tar, *.hic) -- 23.5 GB is beyond what Git handles well. To recreate:
+Download GSE240114 from GEO, extract .allValidPairs.txt.gz per structure
+above. Also excluded from the working set: .hic, .impute.pairs.gz,
+*.3dg.txt.gz, GSE240114_RAW.tar.
