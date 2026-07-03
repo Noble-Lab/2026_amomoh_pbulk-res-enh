@@ -7,10 +7,11 @@ build_contact_matrix from scHiC_contact_matrix_pipeline.py.
 """
 
 
+import json
 import os
 import glob
 import scipy.sparse as sp
-from scHiC_contact_matrix_pipeline import build_contact_matrix
+from scHiC_contact_matrix_pipeline import build_contact_matrix, build_canonical_chrom_map
 
 
 # Maps a cell type name to its actual data directory
@@ -41,6 +42,22 @@ def process_all_cells(data_dir, output_dir, cell_type_dirs = CELL_TYPE_DIRS, bin
 
         print(f"{cell_type}: {len(pairs_files)} cells found")
 
+        # One shared chrom map per cell type -- keeps every cell's matrix the same
+        # shape even if individual headers list slightly different chromosomes
+        # (e.g. a cell with zero chrY contacts omitting chrY from its header).
+        chrom_sizes, chrom_offsets, total_bins = build_canonical_chrom_map(pairs_files, bin_size)
+
+        # Save it alongside the matrices so plotting/inspection later doesn't need
+        # to rescan every raw .allValidPairs.txt file just to get this back.
+        chrom_map_path = os.path.join(cell_type_out_dir, "chrom_map.json")
+        with open(chrom_map_path, "w") as file:
+            json.dump({
+                "bin_size": bin_size,
+                "chrom_sizes": chrom_sizes,
+                "chrom_offsets": chrom_offsets,
+                "total_bins": total_bins,
+            }, file, indent = 2)
+        
         for pairs_file in pairs_files:
             cell_name = os.path.basename(pairs_file).replace(".allValidPairs.txt", "")
             out_path = os.path.join(cell_type_out_dir, f"{cell_name}.npz")            
@@ -51,10 +68,24 @@ def process_all_cells(data_dir, output_dir, cell_type_dirs = CELL_TYPE_DIRS, bin
                 continue
  
             print(f"  Processing {cell_name}...")
-            matrix, chrom_offsets, chrom_sizes = build_contact_matrix(pairs_file, bin_size)
+            matrix, _, _ = build_contact_matrix(
+                pairs_file, bin_size,
+                chrom_sizes = chrom_sizes, chrom_offsets = chrom_offsets, total_bins = total_bins
+            )
             sp.save_npz(out_path, matrix)
  
     print("Done.")
+
+
+def load_chrom_map(output_dir, cell_type):
+    # Load the chrom map process_all_cells already saved for this cell type,
+    # instead of rescanning every raw file again (e.g. when plotting a pooled
+    # matrix in the notebook).
+    chrom_map_path = os.path.join(output_dir, cell_type, "chrom_map.json")
+    with open(chrom_map_path) as file:
+        chrom_map = json.load(file)
+ 
+    return chrom_map["chrom_sizes"], chrom_map["chrom_offsets"], chrom_map["total_bins"]
 
 
 def pseudo_bulk(output_dir, cell_type):
@@ -67,8 +98,9 @@ def pseudo_bulk(output_dir, cell_type):
  
     pooled = None
     n_cells = 0
-    for f in files:
-        m = sp.load_npz(f)
+    
+    for file in files:
+        m = sp.load_npz(file)
         pooled = m if pooled is None else pooled + m
         n_cells += 1
  
