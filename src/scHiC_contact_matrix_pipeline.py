@@ -10,7 +10,7 @@ import scipy.sparse as sp
 import matplotlib.pyplot as plt
 
 
-def _parse_header(pairs_file):
+def parse_header(pairs_file):
     # Parse the leading '#' header block in a single pass, stopping at the
     # first non-header line since headers are always contiguous at the top
     chrom_sizes = {}
@@ -40,22 +40,14 @@ def _parse_header(pairs_file):
     return chrom_sizes, columns
 
 
-def build_contact_matrix(pairs_file, bin_size = 1000000):
-    # Step 1: Parse header once: chromosome sizes and true column layout
-    chrom_sizes, columns = _parse_header(pairs_file)
-
-    # Step 2: Load contact pairs, skipping '#' header lines
-    # (handles extra trailing columns like phase0/phase1 present in some cell types)
-    df = pd.read_csv(pairs_file, sep = '\t', comment = '#', header = None)
-    df.columns = columns
-
-    # Keep only intra-chromosomal contacts (both ends on the same chromosome)
-    df = df[df["chr1"] == df["chr2"]]
-
+def build_chrom_offsets(chrom_sizes, bin_size):
+    # Sort numeric chromosomes (chr1, chr2, ...) before non-numeric (chrX, chrY, ...),
+    # then lay out global bin offsets in that order.
     num, non_num = [], []
-    
+
     for chrom in chrom_sizes.keys():
         chrom_num = chrom.replace("chr", "")
+
         if chrom_num.isdigit():
             num.append((int(chrom_num), chrom))
         
@@ -67,11 +59,54 @@ def build_contact_matrix(pairs_file, bin_size = 1000000):
     # chrom_offsets[chrom] = index of that chromosome's first bin in the global matrix
     chrom_offsets = {}
     offset = 0
+
     for chrom in chrom_sorted:
         chrom_offsets[chrom] = offset
         offset += int(np.ceil(chrom_sizes[chrom] / bin_size))
 
     total_bins = offset
+
+    return chrom_offsets, total_bins
+
+
+def build_canonical_chrom_map(pairs_files, bin_size = 1000000):
+    # Combine the chromosome sets across all cells of a type so every cell's
+    # matrix comes out the same shape and can be pooled. 
+    # Without this, a cell whose header omits a chromosome (e.g. zero chrY contacts) 
+    # gets a smaller matrix than its siblings, and pseudo_bulk's matrix addition fails.
+    chrom_sizes = {}
+    
+    for pairs_file in pairs_files:
+        file_chrom_sizes, _ = parse_header(pairs_file)
+        
+        for chrom, size in file_chrom_sizes.items():
+            if chrom in chrom_sizes and chrom_sizes[chrom] != size:
+                print(f"WARNING: {chrom} size mismatch ({chrom_sizes[chrom]} vs {size}) "
+                      f"in {pairs_file}, keeping first value seen")
+                continue
+            chrom_sizes[chrom] = size
+ 
+    chrom_offsets, total_bins = build_chrom_offsets(chrom_sizes, bin_size)
+    return chrom_sizes, chrom_offsets, total_bins
+
+
+def build_contact_matrix(pairs_file, bin_size = 1000000, chrom_sizes = None, chrom_offsets = None, total_bins = None):
+    # Step 1: Parse header once: chromosome sizes and true column layout
+    file_chrom_sizes, columns = parse_header(pairs_file)
+
+    # Use the caller-supplied canonical chrom map if given (so every cell in a batch
+    # shares the same matrix shape); otherwise derive it from this file alone.
+    if chrom_sizes is None or chrom_offsets is None or total_bins is None:
+        chrom_sizes = file_chrom_sizes
+        chrom_offsets, total_bins = build_chrom_offsets(chrom_sizes, bin_size)
+
+    # Step 2: Load contact pairs, skipping '#' header lines
+    # (handles extra trailing columns like phase0/phase1 present in some cell types)
+    df = pd.read_csv(pairs_file, sep = '\t', comment = '#', header = None)
+    df.columns = columns
+
+    # Keep only intra-chromosomal contacts (both ends on the same chromosome)
+    df = df[df["chr1"] == df["chr2"]]
 
     # Step 3: Filter, then assign global bin indices
     # Global bin: chromosome's starting offset + (position // bin_size)
