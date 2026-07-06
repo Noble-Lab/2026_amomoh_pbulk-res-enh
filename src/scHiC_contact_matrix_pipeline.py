@@ -40,6 +40,14 @@ def parse_header(pairs_file):
     return chrom_sizes, columns
 
 
+def keep_chrom(chrom):
+    # Keep chr1 - chr22 and chrX; drop chrY (missing in some cell types, and
+    # shares repetitive sequence with chrX that's hard to map) and any
+    # scaffold/unplaced sequence, for a consistent set across cell types.
+    chrom_suffix = chrom.replace("chr", "")
+    return chrom_suffix.isdigit() or chrom_suffix == "X" or chrom_suffix == "x"
+
+
 def build_chrom_offsets(chrom_sizes, bin_size):
     # Sort numeric chromosomes (chr1, chr2, ...) before non-numeric (chrX, chrY, ...),
     # then lay out global bin offsets in that order.
@@ -80,13 +88,18 @@ def build_canonical_chrom_map(pairs_files, bin_size = 1000000):
         file_chrom_sizes, _ = parse_header(pairs_file)
         
         for chrom, size in file_chrom_sizes.items():
+            if not keep_chrom(chrom):
+                continue
+
             if chrom in chrom_sizes and chrom_sizes[chrom] != size:
                 print(f"WARNING: {chrom} size mismatch ({chrom_sizes[chrom]} vs {size}) "
                       f"in {pairs_file}, keeping first value seen")
                 continue
+
             chrom_sizes[chrom] = size
  
     chrom_offsets, total_bins = build_chrom_offsets(chrom_sizes, bin_size)
+
     return chrom_sizes, chrom_offsets, total_bins
 
 
@@ -97,7 +110,7 @@ def build_contact_matrix(pairs_file, bin_size = 1000000, chrom_sizes = None, chr
     # Use the caller-supplied canonical chrom map if given (so every cell in a batch
     # shares the same matrix shape); otherwise derive it from this file alone.
     if chrom_sizes is None or chrom_offsets is None or total_bins is None:
-        chrom_sizes = file_chrom_sizes
+        chrom_sizes = {chrom: size for chrom, size in file_chrom_sizes.items() if keep_chrom(chrom)}
         chrom_offsets, total_bins = build_chrom_offsets(chrom_sizes, bin_size)
 
     # Step 2: Load contact pairs, skipping '#' header lines
