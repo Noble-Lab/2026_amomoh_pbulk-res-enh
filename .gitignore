@@ -9,6 +9,9 @@ data/**/*.hic
 results/**/*.npz
 results/**/*.png
 
+# Output JSON
+results/**/*.json
+
 # Jupyter checkpoints
 .ipynb_checkpoints/
 
