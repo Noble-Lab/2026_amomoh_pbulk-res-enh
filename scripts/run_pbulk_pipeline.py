@@ -17,6 +17,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from scHiC_pbulk_batch import process_all_cells, pseudo_bulk, CELL_TYPE_DIRS
 
+# Resolutions to build automatically on every run
+BIN_SIZES = [1000000, 500000, 250000]
+
+def bin_size_label(bin_size):
+    # 1000000 -> "1mb", 500000 -> "500kb", 250000 -> "250kb"
+    if bin_size % 1000000 == 0:
+        return f"{bin_size // 1000000}mb"
+    
+    return f"{bin_size // 1000}kb"
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description = "Run the scHi-C pseudo-bulk pipeline")
     parser.add_argument("--data-dir", default = "data/2026-06-29",
@@ -25,14 +36,49 @@ def parse_args():
                         help = "Directory to write per-cell .npz contact matrices")
     parser.add_argument("--pbulk-dir", default = "results/pseudo_bulk",
                         help = "Directory to write pooled pseudo-bulk .npz matrices")
-    parser.add_argument("--bin-size", type = int, default = 1000000,
-                        help = "Bin size in bp (default: 1Mb)")
     parser.add_argument("--cell-types", nargs = "+", default = list(CELL_TYPE_DIRS.keys()),
                         help = "Subset of cell types to process (default: all)")
     parser.add_argument("--skip-pbulk", action = "store_true",
                         help = "Skip pseudo-bulk pooling, only build per-cell matrices")
-    
-    return parser.parse_args()
+
+    return parser.parse_args()    
+
+
+def run_for_bin_size(args, bin_size, cell_type_dirs):
+    # Nest a bin_size subfolder into both output dirs so different resolutions
+    # (1mb, 500kb, 250kb, etc.) land in separate folders automatically
+    label = bin_size_label(bin_size)
+    output_dir = os.path.join(args.output_dir, label)
+    pbulk_dir = os.path.join(args.pbulk_dir, label)
+
+    print(f"Building per-cell matrices from {args.data_dir} -> {output_dir}")
+
+    process_all_cells(
+        data_dir = args.data_dir,
+        output_dir = output_dir,
+        bin_size = bin_size,
+        cell_type_dirs = cell_type_dirs
+    )
+
+    if not args.skip_pbulk:
+        os.makedirs(pbulk_dir, exist_ok = True)
+        print(f"\nPooling pseudo-bulk matrices -> {pbulk_dir}")
+
+        for cell_type in cell_type_dirs:
+            
+            try:
+                pooled = pseudo_bulk(output_dir, cell_type)
+
+            # No matrices built yet for this cell type (e.g. empty data folder) -- skip it, don't crash the whole run
+            except FileNotFoundError as e:
+                print(f"  {cell_type}: {e}")
+                continue
+
+            out_path = os.path.join(pbulk_dir, f"{cell_type}_pbulk.npz")
+            sp.save_npz(out_path, pooled)
+            print(f"  {cell_type}: saved pooled matrix to {out_path}")
+ 
+
 
 def main():
     args = parse_args()
@@ -43,33 +89,13 @@ def main():
     
     if missing:
         print(f"WARNING: unknown cell type(s) requested, skipping: {sorted(missing)}")
- 
-    print(f"Building per-cell matrices from {args.data_dir} -> {args.output_dir}")
+
+    for bin_size in BIN_SIZES:
+        print(f"---- bin size: {bin_size_label(bin_size)} ----")
+        run_for_bin_size(args, bin_size, cell_type_dirs)
+        print()
+        
     
-    process_all_cells(
-        data_dir = args.data_dir,
-        output_dir = args.output_dir,
-        bin_size = args.bin_size,
-        cell_type_dirs = cell_type_dirs,
-    )
- 
-    if not args.skip_pbulk:
-        os.makedirs(args.pbulk_dir, exist_ok = True)
-        print(f"\nPooling pseudo-bulk matrices -> {args.pbulk_dir}")
-        for cell_type in cell_type_dirs:
-
-            try:
-                pooled = pseudo_bulk(args.output_dir, cell_type)
-
-            # No matrices built yet for this cell type (e.g. empty data folder) -- skip it, don't crash the whole run
-            except FileNotFoundError as e:
-                print(f"  {cell_type}: {e}")
-                continue
-
-            out_path = os.path.join(args.pbulk_dir, f"{cell_type}_pbulk.npz")
-            sp.save_npz(out_path, pooled)
-            print(f"  {cell_type}: saved pooled matrix to {out_path}")
- 
     print("\nPipeline run complete.")
  
  
