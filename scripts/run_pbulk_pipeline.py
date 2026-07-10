@@ -15,17 +15,10 @@ import scipy.sparse as sp
 # Add src/ to the path so this script runs directly without installing a package
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
-from scHiC_pbulk_batch import process_all_cells, pseudo_bulk, CELL_TYPE_DIRS
+from scHiC_pbulk_batch import process_all_cells, pseudo_bulk, CELL_TYPE_DIRS, bin_size_label
 
 # Resolutions to build automatically on every run
 BIN_SIZES = [1000000, 500000, 250000]
-
-def bin_size_label(bin_size):
-    # 1000000 -> "1mb", 500000 -> "500kb", 250000 -> "250kb"
-    if bin_size % 1000000 == 0:
-        return f"{bin_size // 1000000}mb"
-    
-    return f"{bin_size // 1000}kb"
 
 
 def parse_args():
