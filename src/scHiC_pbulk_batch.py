@@ -24,6 +24,14 @@ CELL_TYPE_DIRS = {
 }
 
 
+def bin_size_label(bin_size):
+    # 1000000 -> "1mb", 500000 -> "500kb", 250000 -> "250kb"
+    if bin_size % 1000000 == 0:
+        return f"{bin_size // 1000000}mb"
+    
+    return f"{bin_size // 1000}kb"
+
+
 def process_all_cells(data_dir, output_dir, cell_type_dirs = CELL_TYPE_DIRS, bin_size = 1000000):
     # Loop every cell type's .allValidPairs.txt files, build a matrix for each cell,
     # and save as .npz under output_dir/<cell_type>/<cell_name>.npz
@@ -85,7 +93,7 @@ def load_chrom_map(output_dir, cell_type):
     with open(chrom_map_path) as file:
         chrom_map = json.load(file)
  
-    return chrom_map["chrom_sizes"], chrom_map["chrom_offsets"], chrom_map["total_bins"]
+    return chrom_map["chrom_sizes"], chrom_map["chrom_offsets"], chrom_map["total_bins"], chrom_map["bin_size"]
 
 
 def pseudo_bulk(output_dir, cell_type):
