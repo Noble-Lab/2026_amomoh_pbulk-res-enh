@@ -157,6 +157,6 @@ def run_all_subsample_sweeps(matrices_root, pbulk_root, bin_sizes, cell_types = 
             )
             all_results[(cell_type, bin_size)] = results
 
-            plot_subsample_curve(results, title = f"{cell_type}cell SSIM vs Subset Fraction of Pseudo-bulk ({label})")
+            plot_subsample_curve(results, title = f"{cell_type} Cell SSIM vs Subset Fraction of Pseudo-bulk ({label})")
 
     return all_results
