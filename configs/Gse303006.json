@@ -1,0 +1,28 @@
+{
+  "dataset_name": "GSE303006",
+  "genome_build": "GRCm38",
+  "pairs_suffix": ".pairs",
+  "cell_type_dirs": {
+    "mESC": "mESC",
+    "Ex_L3/4_IT": "Ex_L3_4_IT",
+    "Ex_L2/3_IT": "Ex_L2_3_IT",
+    "Inh_MSN": "Inh_MSN",
+    "Ex_OB": "Ex_OB",
+    "Ex_Unknown1": "Ex_Unknown1",
+    "Ex_L6_CT": "Ex_L6_CT",
+    "Ast": "Ast",
+    "Ex_L5/6_IT": "Ex_L5_6_IT",
+    "Inh_Unknown1": "Inh_Unknown1",
+    "Inh_Pvalb": "Inh_Pvalb",
+    "Inh_Sst": "Inh_Sst",
+    "Inh_Vip": "Inh_Vip",
+    "OPC": "OPC",
+    "ODC": "ODC",
+    "Inh_Ndnf/Lamp5": "Inh_Ndnf_Lamp5",
+    "Ex_CL": "Ex_CL",
+    "Inh_Unknown2": "Inh_Unknown2",
+    "Microglia": "Microglia",
+    "Ex_L5/6_NP": "Ex_L5_6_NP",
+    "Ex_Unknown2": "Ex_Unknown2"
+  }
+}

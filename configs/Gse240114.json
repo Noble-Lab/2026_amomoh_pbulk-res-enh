@@ -1,0 +1,11 @@
+{
+  "dataset_name": "GSE240114",
+  "genome_build": "GRCh38",
+  "pairs_suffix": ".allValidPairs.txt",
+  "cell_type_dirs": {
+    "BJ": "BJ",
+    "K562": "K562",
+    "eHAP": "eHAP/standard",
+    "GM12878": "GM12878"
+  }
+}
