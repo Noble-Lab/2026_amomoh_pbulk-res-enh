@@ -4,6 +4,8 @@ data/**/*.txt.gz
 data/**/*.gz
 data/**/*.tar
 data/**/*.hic
+data/**/*.pairs
+data/**/*.tsv
 
 # Output matrices
 results/**/*.npz
