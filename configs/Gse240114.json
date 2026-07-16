@@ -2,6 +2,7 @@
   "dataset_name": "GSE240114",
   "genome_build": "GRCh38",
   "pairs_suffix": ".allValidPairs.txt",
+  "bin_sizes": [1000000, 500000, 250000],
   "cell_type_dirs": {
     "BJ": "BJ",
     "K562": "K562",

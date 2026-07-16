@@ -2,8 +2,8 @@
   "dataset_name": "GSE303006",
   "genome_build": "GRCm38",
   "pairs_suffix": ".pairs",
+  "bin_sizes": [250000, 100000, 50000],
   "cell_type_dirs": {
-    "mESC": "mESC",
     "Ex_L3/4_IT": "Ex_L3_4_IT",
     "Ex_L2/3_IT": "Ex_L2_3_IT",
     "Inh_MSN": "Inh_MSN",
