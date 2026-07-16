@@ -33,7 +33,7 @@ def load_dataset_config(config_path):
         except json.JSONDecodeError as error:
             raise ValueError(f"Dataset config {config_path} is not valid JSON: {error}") from error
  
-    required_keys = {"dataset_name", "pairs_suffix", "cell_type_dirs"}
+    required_keys = {"dataset_name", "pairs_suffix", "cell_type_dirs", "bin_sizes"}
     missing = required_keys - config.keys()    
 
     if missing:

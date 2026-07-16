@@ -21,9 +21,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from scHiC_pbulk_batch import process_all_cells, pseudo_bulk, bin_size_label, safe_dirname, load_dataset_config
 
-# Resolutions to build automatically on every run
-BIN_SIZES = [1000000, 500000, 250000]
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description = "Run the scHi-C pseudo-bulk pipeline")
@@ -88,6 +85,7 @@ def main():
     config = load_dataset_config(args.config)
     all_cell_type_dirs = config["cell_type_dirs"]
     pairs_suffix = config["pairs_suffix"]
+    bin_sizes = config["bin_sizes"]
     
     # Only keep cell types the user actually asked for and that exist in this dataset's config
     requested = args.cell_types or list(all_cell_type_dirs.keys())
@@ -99,7 +97,7 @@ def main():
 
     print(f"Dataset: {config['dataset_name']} (genome build: {config.get('genome_build', 'unspecified')})")
     
-    for bin_size in BIN_SIZES:
+    for bin_size in bin_sizes:
         print(f"---- bin size: {bin_size_label(bin_size)} ----")
         run_for_bin_size(args, bin_size, cell_type_dirs, pairs_suffix)
         print()
