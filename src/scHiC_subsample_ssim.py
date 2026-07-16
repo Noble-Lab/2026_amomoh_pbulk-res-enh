@@ -15,14 +15,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse as sp
 from skimage.metrics import structural_similarity as ssim
-from scHiC_pbulk_batch import load_chrom_map, bin_size_label, CELL_TYPE_DIRS
-
-CELL_TYPES = list(CELL_TYPE_DIRS.keys())
+from scHiC_pbulk_batch import load_chrom_map, bin_size_label, safe_dirname
 
 
 def list_cell_matrix_files(matrices_dir, cell_type):
     # All per-cell .npz files for this cell type (excludes chrom_map.json)
-    cell_type_dir = os.path.join(matrices_dir, cell_type)
+    cell_type_dir = os.path.join(matrices_dir, safe_dirname(cell_type))
     return sorted(glob.glob(os.path.join(cell_type_dir, "*.npz")))
 
 
@@ -65,7 +63,8 @@ def run_subsample_sweep(matrices_root, pbulk_root, cell_type, bin_size, n_replic
     if n_total < 2:
         raise ValueError(f"Need at least 2 cells to run a subsample sweep, found {n_total} in {matrices_dir}")
     
-    target = sp.load_npz(os.path.join(pbulk_dir, f"{cell_type}_pbulk.npz"))
+    # safe_dirname: matches how run_pbulk_pipeline.py names the pooled .npz file
+    target = sp.load_npz(os.path.join(pbulk_dir, f"{safe_dirname(cell_type)}_pbulk.npz"))
 
     # Confirm the requested bin_size actually matches what this folder was built at,
     # rather than silently trusting the caller -- a mismatch here would otherwise
@@ -139,10 +138,13 @@ def plot_subsample_curve(results, title = None):
     plt.show()
 
 
-def run_all_subsample_sweeps(matrices_root, pbulk_root, bin_sizes, cell_types = CELL_TYPES, n_replicates = 10, seed = 42):
+def run_all_subsample_sweeps(matrices_root, pbulk_root, bin_sizes, cell_types, n_replicates = 10, seed = 42):
     # Runs run_subsample_sweep for every (cell_type, bin_size) combination and plotting
     # each one. Returns all raw results keyed by (cell_type, bin_size),
     # so the data is still reachable even when plotting is on.
+    # cell_types has no default now, pass config["cell_type_dirs"].keys() from the
+    # relevant dataset config (see configs/), same as run_pbulk_pipeline.py does.
+
     all_results = {}
 
     for cell_type in cell_types:
