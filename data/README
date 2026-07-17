@@ -1,3 +1,6 @@
+GSE240114 (human, 4 cell lines)
+================================
+
 SOURCE
 ------
 GSE240114 (NCBI GEO), from the LiMCA paper (Wu et al. 2024, Nat Methods,
@@ -19,3 +22,34 @@ Raw .allValidPairs.txt files excluded using .gitignore (data/**/*.txt, *.gz,
 Download GSE240114 from GEO, extract .allValidPairs.txt.gz per structure
 above. Also excluded from the working set: .hic, .impute.pairs.gz,
 *.3dg.txt.gz, GSE240114_RAW.tar.
+
+
+GSE303006 (mouse, CHARM, brain cortex)
+========================================
+
+SOURCE
+------
+GSE303006 (NCBI GEO), CHARM dataset, mouse brain cortex only (mESC portion
+of the series not downloaded/used). GRCm38/mm10, confirmed from .pairs file
+headers (chr1 = 195,471,971). Downloaded 2026-07-15.
+
+DIRECTORY STRUCTURE
+--------------------
+data/2026-07-15/GSE303006_charm_metadata_qcpass.tsv    cellname -> celltype
+data/2026-07-15/geo_submit/brain_pairs/pairs/          *.pairs (raw, flat)
+data/2026-07-15/<celltype>/                            *.pairs (sorted, via
+                                                         scripts/sort_cells_by_celltype.py)
+
+Cell counts (brain cortex, 19 celltypes, 4265 total): Ex_L3/4_IT 538,
+Ex_L2/3_IT 528, Inh_MSN 413, Ex_OB 333, Ex_Unknown1 307, Ex_L6_CT 288,
+Ast 276, Ex_L5/6_IT 238, Inh_Unknown1 237, Inh_Pvalb 159, Inh_Sst 152,
+Inh_Vip 141, OPC 136, ODC 116, Inh_Ndnf/Lamp5 88, Ex_CL 80, Inh_Unknown2 74,
+Microglia 70, Ex_L5/6_NP 64, Ex_Unknown2 27.
+805 mESC cells listed in metadata, not downloaded, not used.
+
+NOT TRACKED IN GIT
+--------------------
+Raw .pairs and .tsv files excluded via .gitignore (data/**/*.pairs,
+data/**/*.tsv). To recreate: download GSE303006 from GEO
+(brain_pairs supplementary files + charm_metadata_qcpass.tsv), then run
+scripts/sort_cells_by_celltype.py to rebuild the per-celltype structure.
