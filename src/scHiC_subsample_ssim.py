@@ -24,11 +24,21 @@ def list_cell_matrix_files(matrices_dir, cell_type):
     return sorted(glob.glob(os.path.join(cell_type_dir, "*.npz")))
 
 
-def build_subset_pbulk(cell_files, indices):
+def load_all_cell_matrices(cell_files):
+    # Load every cell's matrix from disk ONCE, up front, and keep them in memory.
+    # run_subsample_sweep draws thousands of random subsets per celltype -- reloading
+    # from disk inside that loop (the original approach) means up to ~1.5 million
+    # redundant disk reads for a single 500-cell celltype swept across all subset
+    # sizes and replicates. Loading once here and summing from memory instead cuts
+    # that down to n_total disk reads, period.
+    return [sp.load_npz(f) for f in cell_files]
+
+
+def build_subset_pbulk(cell_matrices, indices):
     # Sum the matrices at the given indices into one pooled matrix
     pooled = None
     for i in indices:
-        m = sp.load_npz(cell_files[i])
+        m = cell_matrices[i]
         pooled = m if pooled is None else pooled + m
     
     return pooled
@@ -63,6 +73,9 @@ def run_subsample_sweep(matrices_root, pbulk_root, cell_type, bin_size, n_replic
     if n_total < 2:
         raise ValueError(f"Need at least 2 cells to run a subsample sweep, found {n_total} in {matrices_dir}")
     
+    # Load every cell's matrix once -- see load_all_cell_matrices for why this matters
+    cell_matrices = load_all_cell_matrices(cell_files)
+
     # safe_dirname: matches how run_pbulk_pipeline.py names the pooled .npz file
     target = sp.load_npz(os.path.join(pbulk_dir, f"{safe_dirname(cell_type)}_pbulk.npz"))
 
@@ -86,7 +99,7 @@ def run_subsample_sweep(matrices_root, pbulk_root, cell_type, bin_size, n_replic
     for n_cells in range(1, n_total + 1):  # 1 ... N, full set
         for replicate in range(n_replicates):
             indices = rng.choice(n_total, size = n_cells, replace = False)
-            subset = build_subset_pbulk(cell_files, indices)
+            subset = build_subset_pbulk(cell_matrices, indices)
 
             scores = [
                 chrom_ssim(subset, target, chrom, chrom_offsets, chrom_sizes, bin_size)
