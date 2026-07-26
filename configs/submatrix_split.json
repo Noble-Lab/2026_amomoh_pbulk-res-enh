@@ -1,0 +1,10 @@
+{
+  "train_val_cell_types": ["Ex_L3/4_IT", "Inh_MSN"],
+  "test_cell_type": "Ex_L2/3_IT",
+  "val_chroms": ["chr4", "chr11"],
+  "test_chroms": ["chr5", "chr14"],
+  "bin_size": 50000,
+  "stride": 1,
+  "window": 256,
+  "input_frac_range": [0.1, 0.4]
+}
