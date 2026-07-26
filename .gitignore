@@ -10,6 +10,7 @@ data/**/*.tsv
 # Output matrices
 results/**/*.npz
 results/**/*.png
+results/**/*.h5
 
 # Output JSON
 results/**/*.json
