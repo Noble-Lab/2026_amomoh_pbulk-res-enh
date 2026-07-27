@@ -21,6 +21,7 @@ results/**/*.json
 # Python
 __pycache__/
 *.pyc
+venv310/
 
 # Editor
 .vscode/
