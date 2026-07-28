@@ -10,7 +10,7 @@ A random low-coverage "input" pool paired against the full-coverage
 Reuses the pooled pseudo-bulk .npz matrices already built by run_pbulk_pipeline.py,
 for targets; builds new low-coverage pools for train/val inputs from the per-cell matrices directly.
 
-Run: python scripts/build_submatrix_dataset.py --split-config configs/GSE303006.json \
+Run: python scripts/build_submatrix_dataset.py --split-config configs/submatrix_split.json \
     --pbulk-dir results/pseudo_bulk/2026-07-15/50kb \
     --matrices-dir results/matrices/2026-07-15/50kb \
     --out-dir results/submatrices
@@ -32,7 +32,7 @@ from submatrix_extraction import load_split_config, pool_random_fraction, extrac
 
 def parse_args():
     parser = argparse.ArgumentParser(description = "Build train/val/test submatrix HDF5 datasets")
-    parser.add_argument("--split-config", required = True, help = "Dataset config, e.g. configs/GSE303006.json")
+    parser.add_argument("--split-config", required = True, help = "Split design config, e.g. configs/submatrix_split.json")
     parser.add_argument("--pbulk-dir", required = True,
                          help = "Pooled pseudo-bulk matrices dir for the 50kb resolution, "
                               "e.g. results/pseudo_bulk/2026-07-15/50kb")
@@ -77,8 +77,17 @@ def write_h5(out_path, inputs, targets, meta, bin_size, window, stride):
     os.makedirs(os.path.dirname(out_path), exist_ok = True)
 
     with h5py.File(out_path, "w") as file:
-        file.create_dataset("input", data = input_arr, compression = "gzip", compression_opts = 4)
-        file.create_dataset("target", data = target_arr, compression = "gzip", compression_opts = 4)
+        # chunks=(1, window, window): each row is its OWN compressed chunk, matching
+        # how DataLoader actually reads (one full row at a time, random order).
+        # Without this, h5py auto-picks a chunk shape that spans many rows and
+        # splits each image into small tiles (confirmed: (125,16,16) on this data) --
+        # every single random-row read then has to decompress a chunk covering 125
+        # unrelated rows just to get one.
+
+        file.create_dataset("input", data = input_arr, compression = "gzip", compression_opts = 4,
+                             chunks = (1, input_arr.shape[1], input_arr.shape[2]))
+        file.create_dataset("target", data = target_arr, compression = "gzip", compression_opts = 4,
+                             chunks = (1, target_arr.shape[1], target_arr.shape[2]))
         file.create_dataset("cell_type", data = cell_types)
         file.create_dataset("chrom", data = chroms)
         file.create_dataset("start_bin", data = start_bins)
