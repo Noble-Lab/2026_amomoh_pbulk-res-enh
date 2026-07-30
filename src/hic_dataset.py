@@ -23,6 +23,7 @@ class SubmatrixDataset(Dataset):
         self.file = h5py.File(h5_path, "r") 
         self.input = self.file["input"]
         self.target = self.file["target"]
+        self.chroms = self.file["chrom"].asstr()[:]  # decode once, used by plot_prediction_comparison()
 
         n_input = self.input.shape[0]
         n_target = self.target.shape[0]
@@ -32,8 +33,10 @@ class SubmatrixDataset(Dataset):
 
         self.n = n_input
 
+
     def __len__(self):
         return self.n
+
 
     def __getitem__(self, index):
         # Add a channel dimension (1, H, W), which is the standard for image-style models,
@@ -42,6 +45,13 @@ class SubmatrixDataset(Dataset):
         y = torch.from_numpy(self.target[index][None, :, :].astype(np.float32))
 
         return x, y
+    
+
+    def indices_for_chrom(self, chrom):
+        # Dataset indices belonging to a given chromosome, used by
+        # plot_prediction_comparison() to sample representative windows.
+        return np.flatnonzero(self.chroms == chrom).tolist()
+
 
     def close(self):
         self.file.close()
