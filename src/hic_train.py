@@ -10,7 +10,14 @@ plot_loss_curve visualizes the result.
 
 import copy
 import torch
+import numpy as np
 import matplotlib.pyplot as plt
+
+
+def set_seed(seed):
+    # Seeds model weights initialization.
+    torch.manual_seed(seed)             # CPU
+    torch.cuda.manual_seed_all(seed)    # GPU
 
 
 def train_one_epoch(model, loader, optimizer, loss_fn, device):
@@ -74,17 +81,21 @@ def train_model(model, train_loader, val_loader, optimizer, loss_fn, device, max
     best_val_loss = float("inf")
     best_state = None
     epochs_without_improvement = 0
-    history = {"train_loss": [], "val_loss": []}
+    history = {"train_loss": [], "train_rmse": [], "val_loss": [], "val_rmse": []}
 
     for epoch in range(max_epochs):
         train_loss = train_one_epoch(model, train_loader, optimizer, loss_fn, device)
         val_loss = evaluate(model, val_loader, loss_fn, device)
 
         history["train_loss"].append(train_loss)
+        history["train_rmse"].append(train_loss ** 0.5)
         history["val_loss"].append(val_loss)
+        history["val_rmse"].append(val_loss ** 0.5)
 
-        print(f"Epoch {epoch}: train = {train_loss:.4f} val = {val_loss:.4f}")
 
+        print(f"Epoch {epoch}: Train = {train_loss:.4f} (RMSE = {train_loss ** 0.5:.4f}) "
+              f"Val = {val_loss:.4f} (RMSE = {val_loss ** 0.5:.4f})")
+              
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_state = copy.deepcopy(model.state_dict())
@@ -102,7 +113,69 @@ def train_model(model, train_loader, val_loader, optimizer, loss_fn, device, max
     return model, history
 
 
-def plot_loss_curve(history, title = None):
+def plot_prediction_comparison(model, dataset, device, n_examples = 5, seed = 42, save_path = None):
+    # n_examples spread across available chromosomes, randomly picked from
+    # non-overlapping candidates (windows overlap 255/256 bins at stride = 1).
+    # Seeded for reproducibility across model comparisons.
+
+    model.eval()
+    rng = np.random.default_rng(seed)
+
+    available = sorted(set(dataset.chroms))
+    n_available = len(available)
+
+    base, reminder = divmod(n_examples, n_available)
+    counts = [base + (1 if i < reminder else 0) for i in range(n_available)]
+
+    window = dataset.input.shape[1]  # e.g. 256 used to space out non-overlapping candidates
+
+    rows = [] # (chrom, index) pairs, in plotting order
+    for chrom, count in zip(available, counts):
+        indexes = dataset.indices_for_chrom(chrom)
+
+        if not indexes:
+            continue
+
+        # Thin to non-overlapping candidates (one every `window` positions along
+        # this chromosome's windows), THEN randomly pick among those candidates
+        candidates = indexes[::window] if len(indexes) > window else indexes
+        n_pick = min(count, len(candidates))
+        chosen = rng.choice(candidates, size = n_pick, replace = False)
+        for c in chosen:
+            rows.append((chrom, int(c)))
+
+    fig, axes = plt.subplots(len(rows), 3, figsize = (9, 3 * len(rows)))
+
+    if len(rows) == 1:
+        axes = axes[None, :]  # keep 2D indexing consistent even for a single row
+ 
+    for row, (chrom, index) in enumerate(rows):
+        x, y = dataset[index]
+        with torch.no_grad():
+            pred = model(x.unsqueeze(0).to(device)).cpu().squeeze(0)
+ 
+        panels = [("Input", x), ("Predicted", pred), ("Target", y)]
+
+        for col, (label, img) in enumerate(panels):
+            ax = axes[row, col]
+            ax.imshow(np.log1p(img.squeeze().numpy()), cmap="Reds")
+            ax.set_xticks([]); ax.set_yticks([])
+
+            if row == 0:
+                ax.set_title(label, fontweight = "bold")
+
+            if col == 0:
+                ax.set_ylabel(chrom, fontweight = "bold", rotation = 0, labelpad = 35)
+ 
+    plt.tight_layout()
+
+    if save_path is not None:
+        fig.savefig(save_path, dpi = 300, bbox_inches = "tight")
+
+    plt.show()
+
+
+def plot_loss_curve(history, title = None, save_path = None):
     # history: the dict returned by train_model (keys "train_loss", "val_loss").
     # Where the two curves diverge is where overfitting starts.
     # Where val loss flattens is roughly where the model has converged.
@@ -118,4 +191,8 @@ def plot_loss_curve(history, title = None):
     ax.legend()
     ax.grid(True, alpha = 0.3)
     plt.tight_layout()
+
+    if save_path is not None:
+        fig.savefig(save_path, dpi = 300, bbox_inches = "tight")
+
     plt.show()
