@@ -15,6 +15,9 @@ results/**/*.h5
 # Output JSON
 results/**/*.json
 
+# Model checkpoints and training runs (regenerable from data + code)
+results/training/
+
 # Jupyter checkpoints
 .ipynb_checkpoints/
 
