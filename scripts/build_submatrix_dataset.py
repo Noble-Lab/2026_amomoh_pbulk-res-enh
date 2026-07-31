@@ -13,7 +13,8 @@ for targets; builds new low-coverage pools for train/val inputs from the per-cel
 Run: python scripts/build_submatrix_dataset.py --split-config configs/submatrix_split.json \
     --pbulk-dir results/pseudo_bulk/2026-07-15/50kb \
     --matrices-dir results/matrices/2026-07-15/50kb \
-    --out-dir results/submatrices
+    --out-dir results/submatrices \
+    --frac 0.05
 """
 
 
@@ -28,21 +29,24 @@ import scipy.sparse as sp
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
 from scHiC_pbulk_batch import load_chrom_map, safe_dirname
-from submatrix_extraction import load_split_config, pool_random_fraction, extract_paired_windows
+from submatrix_extraction import load_split_config, pool_random_fraction, extract_paired_windows, frac_label
 
 def parse_args():
     parser = argparse.ArgumentParser(description = "Build train/val/test submatrix HDF5 datasets")
     parser.add_argument("--split-config", required = True, help = "Split design config, e.g. configs/submatrix_split.json")
     parser.add_argument("--pbulk-dir", required = True,
-                         help = "Pooled pseudo-bulk matrices dir for the 50kb resolution, "
-                              "e.g. results/pseudo_bulk/2026-07-15/50kb")
+                        help = "Pooled pseudo-bulk matrices dir for the 50kb resolution, "
+                            "e.g. results/pseudo_bulk/2026-07-15/50kb")
     parser.add_argument("--matrices-dir", required = True,
-                         help = "Per-cell matrices dir for the same resolution (used only to "
-                              "read chrom_map.json) e.g. results/matrices/2026-07-15/50kb")
+                        help = "Per-cell matrices dir for the same resolution (used only to "
+                            "read chrom_map.json) e.g. results/matrices/2026-07-15/50kb")
     parser.add_argument("--out-dir", default = "results/submatrices",
-                         help = "Where to write train.h5 / val.h5 / test.h5")
+                        help = "Where to write train.h5 / val.h5 / test.h5")
+    parser.add_argument("--frac", type = float, nargs = "+", required = True,
+                        help = "Input fraction: one value for fixed (e.g. --frac 0.05), "
+                            "two values for a random range (e.g. --frac 0.1 0.4)")
     parser.add_argument("--seed", type = int, default = 42,
-                         help = "Seed for the random input-fraction/cell-subset draws")
+                        help = "Seed for the random input-fraction/cell-subset draws")
     
     return parser.parse_args()
 
@@ -109,7 +113,18 @@ def main():
     bin_size = split["bin_size"]
     stride = split["stride"]
     window = split["window"]
-    frac_range = tuple(split["input_frac_range"])
+
+    if len(args.frac) == 1:
+        frac_range = (args.frac[0], args.frac[0])
+
+    elif len(args.frac) == 2:
+        frac_range = (args.frac[0], args.frac[1])
+
+    else:
+        raise ValueError(f"--frac takes 1 value (fixed) or 2 values (range), got {len(args.frac)}: {args.frac}")
+
+    out_dir = os.path.join(args.out_dir, frac_label(frac_range))
+    print(f"Output folder: {out_dir}")
  
     excluded_from_train = set(val_chroms) | set(test_chroms)
  
@@ -167,9 +182,9 @@ def main():
         test_targets.append(tgt_sub)
         test_meta.append(meta)
  
-    write_h5(os.path.join(args.out_dir, "train.h5"), train_inputs, train_targets, train_meta, bin_size, window, stride)
-    write_h5(os.path.join(args.out_dir, "val.h5"), val_inputs, val_targets, val_meta, bin_size, window, stride)
-    write_h5(os.path.join(args.out_dir, "test.h5"), test_inputs, test_targets, test_meta, bin_size, window, stride)
+    write_h5(os.path.join(out_dir, "train.h5"), train_inputs, train_targets, train_meta, bin_size, window, stride)
+    write_h5(os.path.join(out_dir, "val.h5"), val_inputs, val_targets, val_meta, bin_size, window, stride)
+    write_h5(os.path.join(out_dir, "test.h5"), test_inputs, test_targets, test_meta, bin_size, window, stride)
  
     print("\nDone.")
     print(f"Train: {len(train_inputs):,} paired windows")
