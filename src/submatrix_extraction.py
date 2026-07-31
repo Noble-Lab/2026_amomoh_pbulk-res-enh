@@ -43,7 +43,7 @@ from scHiC_pbulk_batch import safe_dirname
 
 def load_split_config(config_path):
     # Loads configs/submatrix_split.json. Required keys: train_val_cell_types,
-    # test_cell_type, val_chroms, test_chroms, bin_size, stride, window, input_frac_range.
+    # test_cell_type, val_chroms, test_chroms, bin_size, stride, window.
     if not os.path.isfile(config_path):
         raise FileNotFoundError(f"Split config not found: {config_path}")
 
@@ -55,7 +55,7 @@ def load_split_config(config_path):
             raise ValueError(f"Split config {config_path} is not valid JSON: {error}") from error
  
     required_keys = {"train_val_cell_types", "test_cell_type", "val_chroms", "test_chroms",
-                      "bin_size", "stride", "window", "input_frac_range"}
+                      "bin_size", "stride", "window"}
 
     missing = required_keys - config.keys()
 
@@ -63,6 +63,18 @@ def load_split_config(config_path):
         raise ValueError(f"Config {config_path} is missing required key(s): {sorted(missing)}")
 
     return config
+
+
+def frac_label(frac_range):
+    # Turns a fraction range into a folder-safe label, e.g. (0.05, 0.05) -> "frac_0.05",
+    # (0.1, 0.4) -> "frac_0.1-0.4". Used to auto-name output folders so different
+    # fraction runs never collide or need to be renamed by hand.
+    low, high = frac_range
+
+    if low == high:
+        return f"frac_{low}"
+
+    return f"frac_{low}-{high}"
 
 
 def pool_random_fraction(matrices_dir, cell_type, frac_range = (0.1, 0.4), seed = 42):
