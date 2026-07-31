@@ -9,9 +9,12 @@ plot_loss_curve visualizes the result.
 
 
 import copy
+import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
+from skimage.metrics import structural_similarity as ssim
 
 
 def set_seed(seed):
@@ -170,8 +173,80 @@ def plot_prediction_comparison(model, dataset, device, n_examples = 5, seed = 42
     plt.tight_layout()
 
     if save_path is not None:
+        save_dir = os.path.dirname(save_path)
+
+        if save_dir:
+            os.makedirs(save_dir, exist_ok = True)
+
         fig.savefig(save_path, dpi = 300, bbox_inches = "tight")
 
+    plt.show()
+
+
+def compute_ssim_scores(model, dataset, device, batch_size = 64):
+    # Runs the model over the WHOLE dataset, and computes the SSIM(input, target) as a baseline 
+    # and SSIM(predicted, target) for the model's actual output, per window. 
+    # Returns two arrays, same length, for plot_ssim_violin() or any other downstream analysis. 
+
+    model.eval()
+    loader = DataLoader(dataset, batch_size = batch_size, shuffle = False)
+
+    input_ssims = []
+    pred_ssims = []
+ 
+    with torch.no_grad():
+        for x, y in loader:
+            x_dev = x.to(device)
+            pred = model(x_dev).cpu()
+
+            for i in range(x.shape[0]):
+                in_img = np.log1p(x[i, 0].numpy())
+                pred_img = np.log1p(pred[i, 0].numpy())
+                tgt_img = np.log1p(y[i, 0].numpy())
+ 
+                data_range = tgt_img.max() - tgt_img.min()
+
+                if data_range == 0:
+                    input_ssims.append(1.0)
+                    pred_ssims.append(1.0)
+                    continue
+
+                input_ssims.append(ssim(in_img, tgt_img, data_range = data_range))
+                pred_ssims.append(ssim(pred_img, tgt_img, data_range = data_range))
+
+    return np.array(input_ssims), np.array(pred_ssims)
+
+
+def plot_ssim_violin(input_ssims, pred_ssims, title = None, save_path = None):
+    # Violin plot comparing SSIM(input, target) vs SSIM(predicted, target)
+    # distributions across every window in the dataset and shows whether the
+    # model's output is genuinely closer to target than the raw degraded
+    # input was, not just on a handful of cherry-picked examples.
+ 
+    fig, ax = plt.subplots(figsize = (10, 6))
+    parts = ax.violinplot([input_ssims, pred_ssims], showmeans = True, showmedians = True)
+
+    colors = ["royalblue", "#FF4D53"]
+    for pc, color in zip(parts["bodies"], colors):
+        pc.set_facecolor(color)
+        pc.set_alpha(0.6)
+ 
+    ax.set_xticks([1, 2])
+    ax.set_xticklabels([f"Input vs Target\n(mean = {input_ssims.mean():.3f})",
+                         f"Predicted vs Target\n(mean = {pred_ssims.mean():.3f})"])
+    ax.set_ylabel("SSIM", fontweight = "bold")
+    ax.set_title(title or "SSIM Distribution: Input vs Predicted (against Target)")
+    ax.grid(True, alpha = 0.3, axis = "y")
+    plt.tight_layout()
+ 
+    if save_path is not None:
+        save_dir = os.path.dirname(save_path)
+
+        if save_dir:
+            os.makedirs(save_dir, exist_ok = True)
+
+        fig.savefig(save_path, dpi = 300, bbox_inches = "tight")
+ 
     plt.show()
 
 
@@ -193,6 +268,11 @@ def plot_loss_curve(history, title = None, save_path = None):
     plt.tight_layout()
 
     if save_path is not None:
+        save_dir = os.path.dirname(save_path)
+
+        if save_dir:
+            os.makedirs(save_dir, exist_ok = True)
+
         fig.savefig(save_path, dpi = 300, bbox_inches = "tight")
 
     plt.show()
