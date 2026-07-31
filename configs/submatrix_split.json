@@ -5,6 +5,5 @@
   "test_chroms": ["chr5", "chr14"],
   "bin_size": 50000,
   "stride": 1,
-  "window": 256,
-  "input_frac_range": [0.1, 0.4]
+  "window": 256
 }
