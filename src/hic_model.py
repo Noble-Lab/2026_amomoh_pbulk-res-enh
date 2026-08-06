@@ -9,6 +9,7 @@ every conv layer uses "same" padding to preserve spatial size throughout.
 
 
 import torch.nn as nn
+from hicfoundation_standalone import HiCFoundationResEnhancement
 
 
 class SimpleEnhanceCNN(nn.Module):
@@ -24,3 +25,17 @@ class SimpleEnhanceCNN(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+
+class HiCFoundationHead(nn.Module):
+    def __init__(self, weights_path, decoder_layers = 0):
+        super().__init__()
+        self.resenh = HiCFoundationResEnhancement(
+            weights_path,  decoder_layers = decoder_layers
+            )
+
+    def forward(self, x):
+        # x: (B, 1, 256, 256) from SubmatrixDataset -> squeeze to (B, 256, 256)
+        out = self.resenh(x.squeeze(1))
+
+        return out.unsqueeze(1)  # back to (B, 1, 256, 256) to match y's shape
