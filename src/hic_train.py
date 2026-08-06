@@ -200,10 +200,15 @@ def compute_ssim_scores(model, dataset, device, batch_size = 64):
             pred = model(x_dev).cpu()
 
             for i in range(x.shape[0]):
-                in_img = np.log1p(x[i, 0].numpy())
-                pred_img = np.log1p(pred[i, 0].numpy())
-                tgt_img = np.log1p(y[i, 0].numpy())
- 
+
+                # Clip to >= 0 before log1p: the model's raw output is not constrained to be
+                # non-negative (last layer has no activation), but contact counts physically
+                # can't be negative, and log1p(x) is undefined for x <= -1, an unclipped
+                # negative prediction silently produces NaN and corrupts the whole SSIM score.
+                in_img = np.log1p(np.clip(x[i, 0].numpy(), 0, None))
+                pred_img = np.log1p(np.clip(pred[i, 0].numpy(), 0, None))
+                tgt_img = np.log1p(np.clip(y[i, 0].numpy(), 0, None))
+
                 data_range = tgt_img.max() - tgt_img.min()
 
                 if data_range == 0:
