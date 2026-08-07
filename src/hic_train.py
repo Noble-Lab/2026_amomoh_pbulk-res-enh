@@ -255,6 +255,51 @@ def plot_ssim_violin(input_ssims, pred_ssims, title = None, save_path = None):
     plt.show()
 
 
+def plot_ssim_violin_3way(input_ssims, cnn_pred_ssims, hicfoundation_pred_ssims, title = None, save_path = None):
+    # Three-way violin: SSIM(input, target) vs SSIM(CNN predicted, target)
+    # vs SSIM(HiCFoundation-head predicted, target), same test set, same
+    # target -- so all three distributions are directly comparable window
+    # for window. input_ssims only needs to be computed once (same input
+    # data for both models); pass whichever one you already have.
+    fig, ax = plt.subplots(figsize = (12, 6))
+    parts = ax.violinplot(
+        [input_ssims, cnn_pred_ssims, hicfoundation_pred_ssims], showmeans = True, showmedians = True
+        )
+
+    labels = ["Input", "CNN", "HiCFoundation"]
+    colors = ["#7F7F7F", "royalblue", "#FF4D53"]
+
+    for pc, color in zip(parts["bodies"], colors):
+        pc.set_facecolor(color)
+        pc.set_alpha(0.6)
+
+    ax.set_xticks([1, 2, 3])
+    ax.set_xticklabels([
+        f"Input vs Target\n(mean = {input_ssims.mean():.3f})",
+        f"CNN Prediction vs Target\n(mean = {cnn_pred_ssims.mean():.3f})",
+        f"HiCFoundation Prediction vs Target\n(mean = {hicfoundation_pred_ssims.mean():.3f})"
+        ])
+
+    ax.set_ylabel("SSIM", fontweight = "bold")
+    ax.set_title(title or "SSIM Distribution: Input vs CNN vs HiCFoundation (against Target)")
+    ax.grid(True, alpha = 0.3, axis = "y")
+ 
+    legend_handles = [plt.Rectangle((0, 0), 1, 1, facecolor = color, alpha = 0.6) for color in colors]
+    ax.legend(legend_handles, labels, loc = "best")
+ 
+    plt.tight_layout()
+ 
+    if save_path is not None:
+        save_dir = os.path.dirname(save_path)
+
+        if save_dir:
+            os.makedirs(save_dir, exist_ok = True)
+ 
+        fig.savefig(save_path, dpi = 300, bbox_inches = "tight")
+ 
+    plt.show()
+
+
 def plot_loss_curve(history, title = None, save_path = None):
     # history: the dict returned by train_model (keys "train_loss", "val_loss").
     # Where the two curves diverge is where overfitting starts.
