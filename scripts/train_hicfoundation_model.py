@@ -46,6 +46,9 @@ def parse_args():
                         help = "Transformer decoder layers on top of bridge/pixel_head. "
                         "0 (default) = fully-connected-only head,"
                         "Set > 0 for the transformer-decoder variant.")
+    parser.add_argument("--patience", type = int, default = None,
+                        help = "Early stopping patience. Overrides the config file's 'patience' "
+                        "value if given; otherwise falls back to the config (default 3).")
     parser.add_argument("--out-dir", default = "results/training_hicfoundation",
                         help = "Where to write model weights + training history "
                         "(a dated subfolder is created under this)")
@@ -69,6 +72,7 @@ def main():
     num_epochs = config.get("num_epochs", 50)
     patience = config.get("patience", 3)
     num_workers = config.get("num_workers", 0)
+    patience = args.patience if args.patience is not None else config.get("patience", 3)
 
     run_date = time.strftime("%Y-%m-%d")
     out_dir = os.path.join(args.out_dir, run_date)
