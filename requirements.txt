@@ -1,0 +1,27 @@
+# Python 3.10. Versions below are what the project was last run against.
+#
+# GPU users: install the CUDA build of torch/torchvision FIRST, e.g.
+#   pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
+# then `pip install -r requirements.txt` for the rest.
+
+# --- core numerics / IO ---
+numpy==2.2.6
+scipy==1.15.3
+pandas>=2.0            # used by src/scHiC_contact_matrix_pipeline.py to parse pairs files
+h5py==3.16.0
+
+# --- deep learning ---
+torch==2.5.1
+torchvision==0.20.1
+
+# --- metrics ---
+scikit-image==0.25.2  # structural_similarity (SSIM)
+
+# --- plotting / progress ---
+matplotlib==3.10.9
+tqdm==4.70.0
+
+# --- notebooks ---
+ipykernel==7.3.0
+jupyter_client==8.9.1
+jupyter_core==5.9.1
